@@ -1,0 +1,18 @@
+﻿CREATE TABLE [dbo].[V8_Reference399_VT400] (
+    [V8_ID]      BINARY (16) NULL,
+    [V8_LineNo]  NUMERIC (5) NULL,
+    [V8_Fld1279] BINARY (16) NULL,
+    [V8_Fld1280] BINARY (1)  NULL,
+    [V8_Fld1281] BINARY (1)  NULL
+);
+
+
+GO
+CREATE NONCLUSTERED INDEX [IND_V8_Reference399_VT400_1]
+    ON [dbo].[V8_Reference399_VT400]([V8_ID] ASC, [V8_LineNo] ASC);
+
+
+GO
+CREATE NONCLUSTERED INDEX [IND_V8_Reference399_VT400_2]
+    ON [dbo].[V8_Reference399_VT400]([V8_Fld1279] ASC);
+
