@@ -1,13 +1,14 @@
 ﻿
 
-CREATE VIEW dbo.vwNomenklatura
+
+CREATE VIEW [dbo].[vwNomenklatura]
 AS
-SELECT     dbo.V8_Reference260.V8_ID, dbo.V8_Reference260.V8_Code, dbo.V8_Reference260.V8_Fld641 as Услуга, dbo.V8_Reference260.V8_Description, dbo.V8_Reference260.V8_Fld631 AS НаименованиеПолное, 
-                      dbo.V8_Reference260.V8_Marked, dbo.V8_Reference260.V8_Parent, dbo.V8_Reference260.V8_Folder, dbo.V8_Reference260.V8_Fld616 AS Артикул, 
-                      dbo.V8_Reference260.V8_Fld617 AS БазоваяЕдиницаИзмерения, dbo.V8_Reference197.V8_Description AS БазоваяЕдиницаИзмерения_Имя, 
-                      dbo.V8_Reference260.V8_Fld618 AS Весовой, dbo.V8_Reference260.V8_Fld619 AS ВесовойКоэффициентВхождения, 
-                      dbo.V8_Reference260.V8_Fld624 AS ВестиУчетПоХарактеристикам, dbo.V8_Reference260.V8_Fld627 AS ЕдиницаДляОтчетов, 
-                      V8_Reference177_1.V8_Description AS ЕдиницаДляОтчетов_Имя, dbo.V8_Reference260.V8_Fld628 AS ЕдиницаХраненияОстатков, 
+SELECT     convert(varchar(100), dbo.V8_Reference260.V8_ID, 1) AS ID, dbo.V8_Reference260.V8_Code, convert(varchar(2), dbo.V8_Reference260.V8_Fld641, 2) as Услуга, dbo.V8_Reference260.V8_Description, dbo.V8_Reference260.V8_Fld631 AS НаименованиеПолное, 
+                      convert(varchar(2), dbo.V8_Reference260.V8_Marked, 2) AS Marked, convert(varchar(100), dbo.V8_Reference260.V8_Parent, 1) AS Parent, convert(varchar(2), dbo.V8_Reference260.V8_Folder, 2) AS Folder, dbo.V8_Reference260.V8_Fld616 AS Артикул, 
+                      convert(varchar(100), dbo.V8_Reference260.V8_Fld617, 1) AS БазоваяЕдиницаИзмерения, dbo.V8_Reference197.V8_Description AS БазоваяЕдиницаИзмерения_Имя, 
+                      convert(varchar(2), dbo.V8_Reference260.V8_Fld618, 2) AS Весовой, dbo.V8_Reference260.V8_Fld619 AS ВесовойКоэффициентВхождения, 
+                      convert(varchar(2), dbo.V8_Reference260.V8_Fld624, 2) AS ВестиУчетПоХарактеристикам, convert(varchar(100), dbo.V8_Reference260.V8_Fld627, 1) AS ЕдиницаДляОтчетов, 
+                      V8_Reference177_1.V8_Description AS ЕдиницаДляОтчетов_Имя, convert(varchar(100), dbo.V8_Reference260.V8_Fld628, 1) AS ЕдиницаХраненияОстатков, 
                       dbo.V8_Reference177.V8_Description AS ЕдиницаХраненияОстатков_Имя
 FROM         dbo.V8_Reference260 LEFT OUTER JOIN
                       dbo.V8_Reference177 AS V8_Reference177_1 ON dbo.V8_Reference260.V8_Fld627 = V8_Reference177_1.V8_ID LEFT OUTER JOIN

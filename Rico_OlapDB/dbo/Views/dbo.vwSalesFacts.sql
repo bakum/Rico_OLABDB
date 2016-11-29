@@ -1,9 +1,10 @@
 ﻿
-CREATE VIEW dbo.vwSalesFacts
+
+CREATE VIEW [dbo].[vwSalesFacts]
 AS
 SELECT     dbo.vwSales.Data, dbo.vwSales.Registrator, dbo.vwSales.Nom_ID, dbo.vwSales.Qtt, dbo.vwSales.Summa, dbo.vwSales.SummDisc, 
                       { fn IFNULL(dbo.vwSebest.Summa, 0) } AS Sebest, dbo.vwSales.Summa - { fn IFNULL(dbo.vwSebest.Summa, 0) } AS Marga, dbo.vwSales.VAT, 
-                      dbo.vwSales.Kontrag_ID, (select V8_Fld313 from dbo.V8_Reference213 where V8_ID = dbo.vwSales.Kontrag_ID) as Region_ID, dbo.vwSales.Organization_ID
+                      dbo.vwSales.Kontrag_ID, convert(varchar(100), (select V8_Fld313 from dbo.V8_Reference213 where convert(varchar(100), V8_ID, 1) = dbo.vwSales.Kontrag_ID), 1) as Region_ID, dbo.vwSales.Organization_ID
 FROM         dbo.vwSales LEFT OUTER JOIN
                       dbo.vwSebest ON dbo.vwSales.Registrator = dbo.vwSebest.Registrator AND dbo.vwSales.Data = dbo.vwSebest.Data AND 
                       dbo.vwSales.Nom_ID = dbo.vwSebest.Nom_ID

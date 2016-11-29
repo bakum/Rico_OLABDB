@@ -1,7 +1,8 @@
 ﻿
-CREATE VIEW dbo.vwOrganizations
+
+CREATE VIEW [dbo].[vwOrganizations]
 AS
-SELECT     V8_ID, V8_Code, V8_Description, V8_Marked, V8_Fld699 AS FullName
+SELECT     convert(varchar(100), V8_ID, 1) AS ID, V8_Code, V8_Description, convert(varchar(2), V8_Marked, 2) AS Marked, V8_Fld699 AS FullName
 FROM         dbo.V8_Reference273
 
 

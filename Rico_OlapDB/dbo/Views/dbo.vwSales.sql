@@ -1,9 +1,10 @@
 ﻿
 
-CREATE VIEW dbo.vwSales
+
+CREATE VIEW [dbo].[vwSales]
 AS
-SELECT     CONVERT(DATETIME, CONVERT(VARCHAR(10), V8_Period, 112)) AS Data, V8_Recorder_RRef as Registrator, V8_Fld15252 AS Nom_ID, SUM(V8_Fld15261) AS Qtt, SUM(V8_Fld15262) 
-                      AS Summa, SUM(V8_Fld15263) AS SummDisc, SUM(V8_Fld15264) AS VAT, MAX(V8_Fld15260) AS Kontrag_ID, MAX(V8_Fld15259) AS Organization_ID
+SELECT     CONVERT(DATETIME, CONVERT(VARCHAR(10), V8_Period, 112)) AS Data, convert(varchar(100), V8_Recorder_RRef, 1) as Registrator, convert(varchar(100), V8_Fld15252, 1) AS Nom_ID, SUM(V8_Fld15261) AS Qtt, SUM(V8_Fld15262) 
+                      AS Summa, SUM(V8_Fld15263) AS SummDisc, SUM(V8_Fld15264) AS VAT, MAX(convert(varchar(100), V8_Fld15260, 1)) AS Kontrag_ID, MAX(convert(varchar(100), V8_Fld15259, 1)) AS Organization_ID
 FROM         dbo.V8_AccumReg2149
 WHERE     (V8_Active = 1)
 GROUP BY V8_Period, V8_Recorder_RRef, V8_Fld15252
