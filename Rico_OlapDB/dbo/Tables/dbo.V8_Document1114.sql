@@ -11,14 +11,14 @@
 );
 
 
-GO
-CREATE NONCLUSTERED INDEX [IND_V8_Document1114_4]
-    ON [dbo].[V8_Document1114]([V8_Fld10118] ASC, [V8_ID] ASC);
 
 
 GO
-CREATE NONCLUSTERED INDEX [IND_V8_Document1114_3]
-    ON [dbo].[V8_Document1114]([V8_Fld10121] ASC, [V8_ID] ASC);
+
+
+
+GO
+
 
 
 GO

@@ -1,0 +1,23 @@
+﻿CREATE PROCEDURE dbo.CalculateStockPartyAmount
+AS 
+  DECLARE @P4 DATETIME
+  DECLARE @P1 DATETIME = '31-12-2012 00:00:00'
+  DECLARE @CURSOR CURSOR
+
+  DELETE FROM StockPartyAmount
+
+  SET @CURSOR  = CURSOR SCROLL
+  FOR
+  SELECT  c.DT  
+    FROM  vwCalendar c
+  OPEN @CURSOR
+  FETCH NEXT FROM @CURSOR INTO @P4
+  WHILE @@FETCH_STATUS = 0
+    BEGIN
+      INSERT INTO StockPartyAmount  (_Period, Nom_ID, Stock_ID, Qtt, Summa)
+       SELECT @P4, Nom_ID, Stock_ID, Balance,Sebest
+       FROM fnStockPartyAmount(@P1,@P4);
+    FETCH NEXT FROM @CURSOR INTO @P4
+    END
+  CLOSE @CURSOR
+  DEALLOCATE @CURSOR

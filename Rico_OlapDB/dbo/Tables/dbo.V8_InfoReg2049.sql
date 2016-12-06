@@ -11,8 +11,11 @@
     [V8_Fld14168]       BINARY (16)     NULL,
     [V8_Fld14169]       NUMERIC (15, 3) NULL,
     [V8_Fld14170]       BINARY (16)     NULL,
-    [V8_Fld14171]       NUMERIC (5, 2)  NULL
+    [V8_Fld14171]       NUMERIC (5, 2)  NULL,
+    [V8_Fld14172]       BINARY (16)     NULL
 );
+
+
 
 
 GO
