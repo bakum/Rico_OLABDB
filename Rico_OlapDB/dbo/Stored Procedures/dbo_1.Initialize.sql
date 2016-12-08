@@ -699,6 +699,66 @@
        FROM fnStockAmount(@P1,@P4);
  END
  '
+ --Create fnLastRatesByDate
+  SET @DataTable = (SELECT TOP 1 TableName FROM vwFieldByInfoReg WHERE V8_ObjectName LIKE 'КурсыВалют')
+  SET @JoinDataTable = (SELECT TOP 1 TableName FROM vwFieldByReference WHERE V8_ObjectName LIKE 'Валюты')
+
+  SET @Field1 = (SELECT V8_FieldName FROM vwFieldByInfoReg WHERE V8_ObjectName LIKE 'КурсыВалют' AND V8_ObjectFieldName LIKE 'Валюта')
+  SET @Field2 = (SELECT V8_FieldName FROM vwFieldByInfoReg WHERE V8_ObjectName LIKE 'КурсыВалют' AND V8_ObjectFieldName LIKE 'Курс')
+  SET @City = (SELECT V8_FieldName FROM vwFieldByInfoReg WHERE V8_ObjectName LIKE 'КурсыВалют' AND V8_ObjectFieldName LIKE 'Кратность')
+  SET @ExecuteStr = N'CREATE FUNCTION dbo.fnLastRatesByDate (@D DATETIME)
+ RETURNS TABLE 
+  AS RETURN (
+  SELECT CONVERT(VARCHAR(100), T1.'+@Field1+', 1) AS Curr_ID
+  , T1.'+@Field2+' AS Kurs
+  , T1.'+@City+' AS Krantost
+  , T5.V8_Description AS Curr_Name
+  FROM 
+  (SELECT T4.'+@Field1+', t4.'+@Field2+', t4.'+@City+' FROM (
+    (SELECT T3.'+@Field1+' AS Curr_ID, MAX(T3.V8_Period) AS MAXPERIOD
+    FROM '+@DataTable+' T3
+      WHERE T3.V8_Period <= @D
+     GROUP BY T3.'+@Field1+') T2
+    INNER JOIN '+@DataTable+' T4 ON T2.Curr_ID = T4.'+@Field1+' AND T2.MAXPERIOD = T4.V8_Period)) T1
+  LEFT OUTER JOIN '+@JoinDataTable+' T5 ON T1.'+@Field1+' = T5.V8_ID 
+  )
+ '
+  IF EXISTS (SELECT
+      1
+    FROM sys.objects
+    WHERE object_id = OBJECT_ID(N'dbo.fnLastRatesByDate')
+    AND type IN ('IF', 'FN', 'TF'))
+  EXEC sp_executesql N'DROP FUNCTION dbo.fnLastRatesByDate'
+
+ IF NOT EXISTS (SELECT
+      1
+    FROM sys.objects
+    WHERE object_id = OBJECT_ID(N'dbo.fnLastRatesByDate')
+    AND type IN ('IF', 'FN', 'TF')) AND OBJECT_ID(N'dbo.'+@DataTable+'', 'U') IS NOT NULL
+    AND OBJECT_ID(N'dbo.'+@JoinDataTable+'', 'U') IS NOT NULL
+  EXEC sp_executesql @ExecuteStr
+
+   --Create vwLastRates
+  SET @ExecuteStr = N'CREATE VIEW dbo.vwLastRates 
+ AS SELECT CONVERT(VARCHAR(100), T1.'+@Field1+', 1) AS Curr_ID
+  , T1.'+@Field2+' AS Kurs
+  , T1.'+@City+' AS Krantost
+  , T5.V8_Description AS Curr_Name
+  FROM 
+  (SELECT T4.'+@Field1+', t4.'+@Field2+', t4.'+@City+' FROM (
+    (SELECT T3.'+@Field1+' AS Curr_ID, MAX(T3.V8_Period) AS MAXPERIOD
+    FROM '+@DataTable+' T3
+     GROUP BY T3.'+@Field1+') T2
+    INNER JOIN '+@DataTable+' T4 ON T2.Curr_ID = T4.'+@Field1+' AND T2.MAXPERIOD = T4.V8_Period)) T1
+  LEFT OUTER JOIN '+@JoinDataTable+' T5 ON T1.'+@Field1+' = T5.V8_ID '
+
+  IF OBJECT_ID(N'dbo.vwLastRates', 'V') IS NOT NULL
+  EXEC sp_executesql N'DROP VIEW dbo.vwLastRates'
+
+ IF OBJECT_ID(N'dbo.vwLastRates', 'V') IS NULL AND OBJECT_ID(N'dbo.'+@DataTable+'', 'U') IS NOT NULL
+    AND OBJECT_ID(N'dbo.'+@JoinDataTable+'', 'U') IS NOT NULL
+  EXEC sp_executesql @ExecuteStr
+
  --Create vwCalendar
   IF OBJECT_ID(N'dbo.vwAccumReg', 'V') IS NOT NULL
     SET @TurnOverCnt = NULLIF((SELECT COUNT(*) FROM vwAccumReg ar),0)
