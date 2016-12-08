@@ -6,9 +6,10 @@
  ,vwSales.Price_ID
  ,vwSales.Qtt
  ,vwSales.Summa
+ ,vwSales.SummPlan
  ,vwSales.SummDisc
- ,NULLIF(vwSebest.Summa, 0) AS Sebest
- ,vwSales.Summa - NULLIF(vwSebest.Summa, 0) AS Marga
+ ,ISNULL(CAST(vwSebest.Summa as DECIMAL(9,2)), 0.0) AS Sebest
+ ,vwSales.Summa - ISNULL(CAST(vwSebest.Summa as DECIMAL(9,2)), 0.0) AS Marga
  ,vwSales.VAT
  ,vwKontragents.Region_ID
  ,vwSales.Kontrag_ID

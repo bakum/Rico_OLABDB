@@ -273,11 +273,97 @@
   EXEC sp_executesql N'DROP VIEW dbo.vwRegions'
  IF OBJECT_ID(N'dbo.vwRegions', 'V') IS NULL AND OBJECT_ID(N'dbo.'+@DataTable+'', 'U') IS NOT NULL
   EXEC sp_executesql @ExecuteStr
+    --Create vwPriceByRegistrator
+  SET @DataTable = (SELECT TOP 1 TableName FROM vwFieldByDocuments WHERE V8_ObjectName LIKE 'РеализацияТоваровУслуг')
+  SET @JoinDataTable = (SELECT TOP 1 TableName FROM vwFieldByReference WHERE V8_ObjectName LIKE 'ДоговорыКонтрагентов')
+  SET @JoinDataTable2 = (SELECT TOP 1 TableName FROM vwFieldByReference WHERE V8_ObjectName LIKE 'ТипыЦенНоменклатуры')
+  SET @Field1 = (SELECT V8_FieldName FROM vwFieldByReference WHERE V8_ObjectName LIKE 'ДоговорыКонтрагентов' AND V8_ObjectFieldName LIKE 'ТипЦен')
+  SET @Field2 = (SELECT V8_FieldName FROM vwFieldByDocuments WHERE V8_ObjectName LIKE 'РеализацияТоваровУслуг' AND V8_ObjectFieldName LIKE 'ДоговорКонтрагента')
+  SET @ExecuteStr =  N'CREATE VIEW dbo.vwPriceByRegistrator 
+ AS SELECT
+  '+@DataTable+'.V8_ID
+ ,'+@JoinDataTable+'.'+@Field1+'_RRef AS Price_ID
+ FROM dbo.'+@DataTable+'
+ LEFT OUTER JOIN dbo.'+@JoinDataTable+'
+  ON '+@DataTable+'.'+@Field2+' = '+@JoinDataTable+'.V8_ID
+ LEFT OUTER JOIN dbo.'+@JoinDataTable2+'
+  ON '+@JoinDataTable+'.'+@Field1+'_RRef = '+@JoinDataTable2+'.V8_ID'
+  IF OBJECT_ID(N'dbo.vwPriceByRegistrator', 'V') IS NOT NULL
+  EXEC sp_executesql N'DROP VIEW dbo.vwPriceByRegistrator'
+ IF OBJECT_ID(N'dbo.vwPriceByRegistrator', 'V') IS NULL  AND OBJECT_ID(N'dbo.'+@DataTable+'', 'U') IS NOT NULL 
+    AND OBJECT_ID(N'dbo.'+@JoinDataTable+'', 'U') IS NOT NULL AND OBJECT_ID(N'dbo.'+@JoinDataTable2+'', 'U') IS NOT NULL
+  EXEC sp_executesql @ExecuteStr
+  
+  --Create fnLastPriceByDate
+  SET @DataTable = (SELECT TOP 1 TableName FROM vwFieldByInfoReg  WHERE V8_ObjectName LIKE 'ЦеныНоменклатуры')
+  SET @JoinDataTable = (SELECT TOP 1 TableName FROM vwFieldByReference WHERE V8_ObjectName LIKE 'Номенклатура')
+  SET @JoinDataTable2 = (SELECT TOP 1 TableName FROM vwFieldByReference WHERE V8_ObjectName LIKE 'ТипыЦенНоменклатуры')
+  SET @Field1 = (SELECT V8_FieldName FROM vwFieldByInfoReg WHERE V8_ObjectName LIKE 'ЦеныНоменклатуры' AND V8_ObjectFieldName LIKE 'ТипЦен')
+  SET @Field2 = (SELECT V8_FieldName FROM vwFieldByInfoReg WHERE V8_ObjectName LIKE 'ЦеныНоменклатуры' AND V8_ObjectFieldName LIKE 'Номенклатура')
+  SET @City = (SELECT V8_FieldName FROM vwFieldByInfoReg WHERE V8_ObjectName LIKE 'ЦеныНоменклатуры' AND V8_ObjectFieldName LIKE 'Цена')
+  SET @ExecuteStr = N'CREATE FUNCTION dbo.fnLastPriceByDate (@D DATETIME)
+ RETURNS TABLE 
+  AS RETURN (
+  SELECT CONVERT(VARCHAR(100), T1.'+@Field1+', 1) AS Price_ID
+  , CONVERT(VARCHAR(100), T1.'+@Field2+', 1) AS Nom_ID
+  , T1.'+@City+' AS Price
+  , T6.V8_Description AS Price_Name
+  , T5.V8_Description AS Nom_Name
+  FROM 
+  (SELECT T4.'+@Field1+', t4.'+@Field2+', t4.'+@City+' FROM (
+    (SELECT T3.'+@Field1+' AS Price_ID, T3.'+@Field2+' AS Nom_ID, MAX(T3.V8_Period) AS MAXPERIOD
+      FROM '+@DataTable+' T3
+      WHERE T3.V8_Active = 1 AND T3.V8_Period <= @D
+      GROUP BY T3.'+@Field1+', T3.'+@Field2+') T2
+      INNER JOIN '+@DataTable+' T4 ON T2.Price_ID = T4.'+@Field1+' AND T2.Nom_ID = T4.'+@Field2+' and
+         T2.MAXPERIOD = T4.V8_Period)) T1
+  LEFT OUTER JOIN '+@JoinDataTable+' T5 ON T1.'+@Field2+' = T5.V8_ID 
+  LEFT OUTER JOIN '+@JoinDataTable2+' T6 ON T1.'+@Field1+' = T6.V8_ID 
+ )
+ '
+  IF EXISTS (SELECT
+      1
+    FROM sys.objects
+    WHERE object_id = OBJECT_ID(N'dbo.fnLastPriceByDate')
+    AND type IN ('IF', 'FN', 'TF'))
+  EXEC sp_executesql N'DROP FUNCTION dbo.fnLastPriceByDate'
+
+ IF NOT EXISTS (SELECT
+      1
+    FROM sys.objects
+    WHERE object_id = OBJECT_ID(N'dbo.fnLastPriceByDate')
+    AND type IN ('IF', 'FN', 'TF')) AND OBJECT_ID(N'dbo.'+@DataTable+'', 'U') IS NOT NULL
+    AND OBJECT_ID(N'dbo.'+@JoinDataTable+'', 'U') IS NOT NULL
+    AND OBJECT_ID(N'dbo.'+@JoinDataTable2+'', 'U') IS NOT NULL
+  EXEC sp_executesql @ExecuteStr
+
+  --Create vwLastPrices
+  SET @ExecuteStr =  N'CREATE VIEW dbo.vwLastPrices 
+ AS SELECT T1.'+@Field1+' AS Price_ID
+  , T1.'+@Field2+' AS Nom_ID
+  , T1.'+@City+' AS Price
+  , T5.V8_Description AS Nom_Name
+  FROM 
+  (SELECT T4.'+@Field1+', t4.'+@Field2+', t4.'+@City+' FROM (
+    (SELECT T3.'+@Field1+' AS Price_ID, T3.'+@Field2+' AS Nom_ID, MAX(T3.V8_Period) AS MAXPERIOD
+    FROM '+@DataTable+' T3
+    WHERE T3.V8_Active = 1
+     GROUP BY T3.'+@Field1+', T3.'+@Field2+') T2
+    INNER JOIN '+@DataTable+' T4 ON T2.Price_ID = T4.'+@Field1+' AND T2.Nom_ID = T4.'+@Field2+' and
+    T2.MAXPERIOD = T4.V8_Period)) T1
+  LEFT OUTER JOIN '+@JoinDataTable+' T5 ON T1.'+@Field2+' = T5.V8_ID '
+  IF OBJECT_ID(N'dbo.vwLastPrices', 'V') IS NOT NULL
+  EXEC sp_executesql N'DROP VIEW dbo.vwLastPrices'
+
+ IF OBJECT_ID(N'dbo.vwLastPrices', 'V') IS NULL AND OBJECT_ID(N'dbo.'+@DataTable+'', 'U') IS NOT NULL
+    AND OBJECT_ID(N'dbo.'+@JoinDataTable+'', 'U') IS NOT NULL
+  EXEC sp_executesql @ExecuteStr
+    
   --Create vwSales
   SET @DataTable = (SELECT TOP 1 TableName FROM vwFieldByAccumReg WHERE V8_ObjectName LIKE 'Продажи')
-  SET @JoinDataTable = (SELECT TOP 1 TableName FROM vwFieldByDocuments WHERE V8_ObjectName LIKE 'РеализацияТоваровУслуг')
+  --SET @JoinDataTable = (SELECT TOP 1 TableName FROM vwFieldByDocuments WHERE V8_ObjectName LIKE 'РеализацияТоваровУслуг')
   SET @RegionID = (SELECT V8_FieldName FROM vwFieldByAccumReg WHERE V8_ObjectName LIKE 'Продажи' AND V8_ObjectFieldName LIKE 'Номенклатура')
-  SET @Fullname = (SELECT V8_FieldName FROM vwFieldByDocuments WHERE V8_ObjectName LIKE 'РеализацияТоваровУслуг' AND V8_ObjectFieldName LIKE 'ТипЦен')
+  --SET @Fullname = (SELECT V8_FieldName FROM vwFieldByDocuments WHERE V8_ObjectName LIKE 'РеализацияТоваровУслуг' AND V8_ObjectFieldName LIKE 'ТипЦен')
   SET @City = (SELECT V8_FieldName FROM vwFieldByAccumReg WHERE V8_ObjectName LIKE 'Продажи' AND V8_ObjectFieldName LIKE 'Количество')
   SET @Category = (SELECT V8_FieldName FROM vwFieldByAccumReg WHERE V8_ObjectName LIKE 'Продажи' AND V8_ObjectFieldName LIKE 'Стоимость')
   SET @OKPO = (SELECT V8_FieldName FROM vwFieldByAccumReg WHERE V8_ObjectName LIKE 'Продажи' AND V8_ObjectFieldName LIKE 'СтоимостьБезСкидок')
@@ -285,29 +371,43 @@
   SET @Field1 = (SELECT V8_FieldName FROM vwFieldByAccumReg WHERE V8_ObjectName LIKE 'Продажи' AND V8_ObjectFieldName LIKE 'Контрагент')
   SET @Field2 = (SELECT V8_FieldName FROM vwFieldByAccumReg WHERE V8_ObjectName LIKE 'Продажи' AND V8_ObjectFieldName LIKE 'Организация')
   SET @ExecuteStr = N'CREATE VIEW dbo.vwSales 
- AS SELECT T1.Data, T1.Registrator, T1.Nom_ID, T1.Price_ID, SUM(T1.Qtt) Qtt, SUM(T1.Summa) Summa, SUM(T1.SummDisc) SummDisc,
-  SUM(T1.VAT) VAT, MIN(T1.Kontrag_ID) Kontrag_ID, MIN(T1.Organization_ID) Organization_ID
- FROM (SELECT
-  CONVERT(DATETIME, CONVERT(VARCHAR(10), '+@DataTable+'.V8_Period, 112)) AS Data
- ,CONVERT(VARCHAR(100), '+@DataTable+'.V8_Recorder_RRef, 1) AS Registrator
- ,CONVERT(VARCHAR(100), '+@DataTable+'.'+@RegionID+', 1) AS Nom_ID
- ,CONVERT(VARCHAR(100), '+@JoinDataTable+'.'+@Fullname+', 1) AS Price_ID
- ,'+@DataTable+'.'+@City+' AS Qtt
- ,'+@DataTable+'.'+@Category+' AS Summa
- ,'+@DataTable+'.'+@OKPO+' AS SummDisc
- ,'+@DataTable+'.'+@INN+' AS VAT
- ,CONVERT(VARCHAR(100), '+@DataTable+'.'+@Field1+', 1) AS Kontrag_ID
- ,CONVERT(VARCHAR(100), '+@DataTable+'.'+@Field2+', 1) AS Organization_ID
- FROM dbo.'+@DataTable+'
- LEFT OUTER JOIN dbo.'+@JoinDataTable+'
-  ON '+@DataTable+'.V8_Recorder_RRef = '+@JoinDataTable+'.V8_ID
- WHERE '+@DataTable+'.V8_Active = 1) T1
- GROUP BY T1.Data, T1.Registrator, T1.Nom_ID, T1.Price_ID'
+  AS SELECT T2.Data
+   , T2.Registrator
+   , T2.Nom_ID
+   , T2.Price_ID
+   , T2.Qtt
+   , T2.Summa
+   , (ISNULL(CAST(T2.Price as DECIMAL(9,2)), 0.0) * T2.Qtt) SummPlan
+   , T2.SummDisc
+   , T2.VAT
+   , T2.Kontrag_ID
+   , T2.Organization_ID
+  FROM (SELECT
+   CONVERT(DATETIME, CONVERT(VARCHAR(10), '+@DataTable+'.V8_Period, 112)) AS Data
+  ,CONVERT(VARCHAR(100), '+@DataTable+'.V8_Recorder_RRef, 1) AS Registrator
+  ,CONVERT(VARCHAR(100), '+@DataTable+'.'+@RegionID+', 1) AS Nom_ID
+  ,CONVERT(VARCHAR(100), vwPriceByRegistrator.Price_ID, 1) AS Price_ID
+  ,(SELECT Price FROM fnLastPriceByDate(CONVERT(DATETIME, CONVERT(VARCHAR(10), '+@DataTable+'.V8_Period, 112))) t 
+    WHERE t.Price_ID = CONVERT(VARCHAR(100), vwPriceByRegistrator.Price_ID, 1)
+    AND t.Nom_ID = CONVERT(VARCHAR(100), '+@DataTable+'.'+@RegionID+', 1)) Price
+  ,'+@DataTable+'.'+@City+' AS Qtt
+  ,'+@DataTable+'.'+@Category+' AS Summa
+  ,'+@DataTable+'.'+@OKPO+' AS SummDisc
+  ,'+@DataTable+'.'+@INN+' AS VAT
+  ,CONVERT(VARCHAR(100), '+@DataTable+'.'+@Field1+', 1) AS Kontrag_ID
+  ,CONVERT(VARCHAR(100), '+@DataTable+'.'+@Field2+', 1) AS Organization_ID
+  FROM dbo.'+@DataTable+'
+  LEFT OUTER JOIN dbo.vwPriceByRegistrator
+   ON '+@DataTable+'.V8_Recorder_RRef = vwPriceByRegistrator.V8_ID
+  WHERE '+@DataTable+'.V8_Active = 1
+  AND '+@DataTable+'.'+@Category+' > 0) T2
+  '
   IF OBJECT_ID(N'dbo.vwSales', 'V') IS NOT NULL
   EXEC sp_executesql N'DROP VIEW dbo.vwSales'
  IF OBJECT_ID(N'dbo.vwSales', 'V') IS NULL AND OBJECT_ID(N'dbo.'+@DataTable+'', 'U') IS NOT NULL 
-    AND OBJECT_ID(N'dbo.'+@JoinDataTable+'', 'U') IS NOT NULL
+    AND OBJECT_ID(N'dbo.vwPriceByRegistrator', 'V') IS NOT NULL
   EXEC sp_executesql @ExecuteStr
+
   --Create vwSebest
   DECLARE @Nom_ID NVARCHAR(50)
   DECLARE @Qtt NVARCHAR(50)
@@ -322,6 +422,7 @@
     EXEC sp_executesql N'DROP VIEW dbo.vwSebest'
   IF OBJECT_ID(N'dbo.vwSebest', 'V') IS NULL AND OBJECT_ID(N'dbo.'+@DataTable+'', 'U') IS NOT NULL
     EXEC sp_executesql @ExecuteStr
+
  --Create vwSalesFacts
  IF OBJECT_ID(N'dbo.vwSalesFacts', 'V') IS NOT NULL
    EXEC sp_executesql N'DROP VIEW dbo.vwSalesFacts'
@@ -336,9 +437,10 @@
  ,vwSales.Price_ID
  ,vwSales.Qtt
  ,vwSales.Summa
+ ,vwSales.SummPlan
  ,vwSales.SummDisc
- ,NULLIF(vwSebest.Summa, 0) AS Sebest
- ,vwSales.Summa - NULLIF(vwSebest.Summa, 0) AS Marga
+ ,ISNULL(CAST(vwSebest.Summa as DECIMAL(9,2)), 0.0) AS Sebest
+ ,vwSales.Summa - ISNULL(CAST(vwSebest.Summa as DECIMAL(9,2)), 0.0) AS Marga
  ,vwSales.VAT
  ,vwKontragents.Region_ID
  ,vwSales.Kontrag_ID
@@ -478,6 +580,22 @@
        FROM fnStockPartyAmount(@P1,@P4);
  END
  '
+   --Create vwCurrentStockAmount
+ IF OBJECT_ID(N'dbo.vwCurrentStockAmount', 'V') IS NOT NULL
+  EXEC sp_executesql N'DROP VIEW dbo.vwCurrentStockAmount'
+
+ IF OBJECT_ID(N'dbo.vwCurrentStockAmount', 'V') IS NULL AND OBJECT_ID(N'dbo.StockPartyAmount', 'U') IS NOT NULL
+  EXEC sp_executesql N'CREATE VIEW dbo.vwCurrentStockAmount 
+ AS SELECT
+  StockPartyAmount.ID
+ ,StockPartyAmount._Period
+ ,StockPartyAmount.Nom_ID
+ ,StockPartyAmount.Stock_ID
+ ,StockPartyAmount.Qtt
+ ,StockPartyAmount.Summa
+ FROM dbo.StockPartyAmount
+ WHERE StockPartyAmount._Period = ''01-01-2999 00:00:00'''
+
  --Create vwStockTurnover
   SET @DataTable = (SELECT TOP 1 TableName FROM vwFieldByAccumReg WHERE V8_ObjectName LIKE 'ТоварыНаСкладах')
   SET @Qtt = (SELECT V8_FieldName FROM vwFieldByAccumReg WHERE V8_ObjectName LIKE 'ТоварыНаСкладах' AND V8_ObjectFieldName LIKE 'Количество')
